@@ -1,6 +1,6 @@
 import './style.css';
 
-import { SetIP, SetUsername, SetPassword, GetIP, GetUsername, OpenX } from '../wailsjs/go/main/App';
+import { SetConfig, SetPassword, GetIP, GetUsername, GetPassword, OpenX } from '../wailsjs/go/main/App';
 
 // ──────────────────────────────────────
 // State
@@ -100,10 +100,10 @@ function renderSetup(): string {
 
           <div class="password-section">
             <div class="password-toggle-row">
-              <div class="toggle-switch">
+              <label class="toggle-switch">
                 <input type="checkbox" id="password-toggle" />
                 <span class="toggle-slider"></span>
-              </div>
+              </label>
               <label for="password-toggle">Save password</label>
             </div>
 
@@ -125,7 +125,7 @@ function renderSetup(): string {
                   class="form-input"
                   id="setup-password"
                   type="password"
-                  placeholder="Enter your password"
+                  placeholder="Enter your password (min. 4 characters)"
                 />
               </div>
             </div>
@@ -185,9 +185,10 @@ async function handleSetup() {
   submitBtn.innerHTML = '<span class="spinner"></span> Connecting...';
 
   try {
-    // Set IP (this pings to validate)
-    await SetIP(ip);
-    await SetUsername(username);
+    // SetConfig validates the IP (pings it) and username, then persists to disk
+    await SetConfig(ip, username);
+
+    // Save password to macOS Keychain if provided
     if (password) {
       await SetPassword(password);
     }
@@ -210,11 +211,18 @@ async function handleSetup() {
 async function renderDashboard(): Promise<string> {
   let ip = '';
   let username = '';
+  let hasPassword = false;
   try {
     ip = await GetIP();
     username = await GetUsername();
   } catch {
-    // Fallback
+    // Fallback — config not set yet
+  }
+  try {
+    const pwd = await GetPassword();
+    hasPassword = pwd.length > 0;
+  } catch {
+    // No password stored in keychain
   }
 
   return `
@@ -238,11 +246,11 @@ async function renderDashboard(): Promise<string> {
       </div>
 
       <div class="actions-grid">
-        <button class="btn btn-action" id="btn-screen">
+        <button class="btn btn-action" id="btn-screen" ${!hasPassword ? 'title="macOS will prompt for password"' : ''}>
           <span class="action-icon">🖥️</span>
           <span class="action-label">Screen Share</span>
         </button>
-        <button class="btn btn-action" id="btn-files">
+        <button class="btn btn-action" id="btn-files" ${!hasPassword ? 'title="macOS will prompt for password"' : ''}>
           <span class="action-icon">📁</span>
           <span class="action-label">Open Files</span>
         </button>
@@ -332,10 +340,10 @@ async function renderSettings(): Promise<string> {
 
           <div class="password-section">
             <div class="password-toggle-row">
-              <div class="toggle-switch">
+              <label class="toggle-switch">
                 <input type="checkbox" id="settings-password-toggle" />
                 <span class="toggle-slider"></span>
-              </div>
+              </label>
               <label for="settings-password-toggle">Update password</label>
             </div>
 
@@ -355,7 +363,7 @@ async function renderSettings(): Promise<string> {
                   class="form-input"
                   id="settings-password"
                   type="password"
-                  placeholder="Enter new password"
+                  placeholder="Enter new password (min. 4 characters)"
                 />
               </div>
             </div>
@@ -416,9 +424,10 @@ async function handleSettings() {
   submitBtn.innerHTML = '<span class="spinner"></span> Saving...';
 
   try {
-    await SetIP(ip);
-    await SetUsername(username);
+    // SetConfig validates and persists IP + username to config file
+    await SetConfig(ip, username);
 
+    // Save password to macOS Keychain if toggled on
     if (passwordToggle.checked && passwordInput) {
       await SetPassword(passwordInput.value);
     }
@@ -464,7 +473,7 @@ function escapeHtml(str: string): string {
 async function init() {
   setTheme(getTheme());
 
-  // Check if already configured (has an IP set)
+  // Check if already configured (has a config file with an IP set)
   try {
     const existingIP = await GetIP();
     if (existingIP) {
