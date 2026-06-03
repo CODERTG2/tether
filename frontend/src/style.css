@@ -371,6 +371,35 @@ body {
   transform: none;
 }
 
+.btn-danger {
+  width: 100%;
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid var(--danger);
+  box-shadow: none;
+}
+
+.btn-danger::after {
+  display: none;
+}
+
+.btn-danger:hover {
+  background: var(--danger-glow);
+  box-shadow: 0 4px 16px var(--danger-glow);
+  transform: translateY(-1px);
+}
+
+.btn-danger:active {
+  transform: translateY(0);
+}
+
+.delete-password-section {
+  margin-top: 16px;
+  margin-bottom: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
 .btn-action {
   flex: 1;
   height: 120px;

@@ -16,6 +16,14 @@ func VerifyIP(new_ip string) (string, error) {
 	}
 }
 
+func (a *App) GetIP() (string, error) {
+	var config, err = a.GetConfig()
+	if err != nil {
+		return "", err
+	}
+	return config.IP, nil
+}
+
 func Ping(new_ip string) (string, error) {
 	var count int = 1
 

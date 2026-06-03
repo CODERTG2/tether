@@ -37,11 +37,11 @@ func (a *App) OpenX(action string) error {
 	}
 
 	var ip, err1 = a.GetIP()
-	var username, err2 = a.GetUsername()
-	var pwd, err3 = a.GetPassword()
+	var username = a.GetUsername()
+	var pwd = a.GetPassword()
 
-	if err1 != nil || err2 != nil || err3 != nil {
-		return fmt.Errorf("Could not get config or password")
+	if err1 != nil {
+		return fmt.Errorf("Could not get IP")
 	}
 
 	err := exec.Command("open", protocol+"://"+username+":"+pwd+"@"+ip).Run()

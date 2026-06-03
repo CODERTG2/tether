@@ -1,6 +1,6 @@
 import './style.css';
 
-import { SetConfig, SetPassword, GetIP, GetUsername, GetPassword, OpenX } from '../wailsjs/go/main/App';
+import { SetConfig, SetPassword, DeletePassword, GetIP, GetUsername, GetPassword, OpenX } from '../wailsjs/go/main/App';
 
 // ──────────────────────────────────────
 // State
@@ -88,13 +88,12 @@ function renderSetup(): string {
           </div>
 
           <div class="form-group">
-            <label class="form-label" for="setup-username">Username</label>
+            <label class="form-label" for="setup-username">Username <span style="color: var(--text-muted); font-weight: 400; text-transform: none; letter-spacing: 0;">(optional)</span></label>
             <input
               class="form-input"
               id="setup-username"
               type="text"
               placeholder="Enter your username"
-              required
             />
           </div>
 
@@ -175,8 +174,8 @@ async function handleSetup() {
   const username = usernameInput.value.trim();
   const password = passwordToggle.checked && passwordInput ? passwordInput.value : '';
 
-  if (!ip || !username) {
-    showStatus('setup-status', 'Please fill in all required fields.', 'error');
+  if (!ip) {
+    showStatus('setup-status', 'Server address is required.', 'error');
     return;
   }
 
@@ -214,16 +213,12 @@ async function renderDashboard(): Promise<string> {
   let hasPassword = false;
   try {
     ip = await GetIP();
-    username = await GetUsername();
   } catch {
     // Fallback — config not set yet
   }
-  try {
-    const pwd = await GetPassword();
-    hasPassword = pwd.length > 0;
-  } catch {
-    // No password stored in keychain
-  }
+  username = await GetUsername();
+  const pwd = await GetPassword();
+  hasPassword = pwd.length > 0;
 
   return `
     <div class="bg-orbs"></div>
@@ -242,7 +237,7 @@ async function renderDashboard(): Promise<string> {
 
       <div class="connection-info">
         <span class="dot"></span>
-        <span>Connected as <strong>${escapeHtml(username)}</strong> @ <strong>${escapeHtml(ip)}</strong></span>
+        <span>${username ? `Connected as <strong>${escapeHtml(username)}</strong> @ ` : 'Connected to '}<strong>${escapeHtml(ip)}</strong></span>
       </div>
 
       <div class="actions-grid">
@@ -295,12 +290,15 @@ async function handleAction(action: string, label: string) {
 async function renderSettings(): Promise<string> {
   let ip = '';
   let username = '';
+  let hasPassword = false;
   try {
     ip = await GetIP();
-    username = await GetUsername();
   } catch {
     // Fallback
   }
+  username = await GetUsername();
+  const pwd = await GetPassword();
+  hasPassword = pwd.length > 0;
 
   return `
     <div class="bg-orbs"></div>
@@ -327,14 +325,13 @@ async function renderSettings(): Promise<string> {
           </div>
 
           <div class="form-group">
-            <label class="form-label" for="settings-username">Username</label>
+            <label class="form-label" for="settings-username">Username <span style="color: var(--text-muted); font-weight: 400; text-transform: none; letter-spacing: 0;">(optional)</span></label>
             <input
               class="form-input"
               id="settings-username"
               type="text"
               placeholder="Enter your username"
               value="${escapeHtml(username)}"
-              required
             />
           </div>
 
@@ -369,6 +366,15 @@ async function renderSettings(): Promise<string> {
             </div>
           </div>
 
+          ${hasPassword ? `
+          <div class="delete-password-section">
+            <button type="button" class="btn btn-danger" id="btn-delete-password">
+              🗑️ Delete Saved Password
+            </button>
+            <div class="form-hint" style="margin-top: 8px; text-align: center;">Remove password from macOS Keychain</div>
+          </div>
+          ` : ''}
+
           <button type="submit" class="btn btn-primary" id="settings-submit">
             Save Changes
           </button>
@@ -397,6 +403,19 @@ function attachSettingsListeners() {
     }
   });
 
+  // Delete password
+  document.getElementById('btn-delete-password')?.addEventListener('click', async () => {
+    try {
+      await DeletePassword();
+      showStatus('settings-status', 'Password deleted from Keychain.', 'success');
+      // Re-render settings to remove the delete button
+      setTimeout(() => navigate('settings'), 600);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      showStatus('settings-status', message, 'error');
+    }
+  });
+
   // Form submit
   const form = document.getElementById('settings-form') as HTMLFormElement;
   form.addEventListener('submit', async (e) => {
@@ -415,8 +434,8 @@ async function handleSettings() {
   const ip = ipInput.value.trim();
   const username = usernameInput.value.trim();
 
-  if (!ip || !username) {
-    showStatus('settings-status', 'IP and username are required.', 'error');
+  if (!ip) {
+    showStatus('settings-status', 'Server address is required.', 'error');
     return;
   }
 

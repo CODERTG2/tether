@@ -40,22 +40,6 @@ func (a *App) GetConfig() (Config, error) {
 	return Read(path)
 }
 
-func (a *App) GetIP() (string, error) {
-	var config, err = a.GetConfig()
-	if err != nil {
-		return "", err
-	}
-	return config.IP, nil
-}
-
-func (a *App) GetUsername() (string, error) {
-	var config, err = a.GetConfig()
-	if err != nil {
-		return "", err
-	}
-	return config.Username, nil
-}
-
 func Write(path string, config Config) error {
 	file, err := os.Create(path)
 	if err != nil {
