@@ -9,9 +9,14 @@ Tether is a modern, lightweight desktop application built with [Wails](https://w
 - **Persistent Configuration**: Your server address and username are saved to a local config file (`~/Library/Application Support/tether`) and automatically loaded on subsequent launches — no need to re-enter them every time.
 - **Screen Sharing (VNC)**: One-click access to open a VNC screen-sharing session with your home server.
 - **File Browser (SMB)**: One-click access to mount and open your server's file system via SMB.
+- **Advanced Port Scanner**: Built-in network scanner that checks all 65,535 ports on your server.
+  - Automatically identifies services using TCP Banner Grabbing, HTTP `<title>` scraping, and a fallback dictionary of well-known ports.
+  - Fetches and displays favicons for web services.
+  - Allows inline editing of discovered service names and deleting ports.
+  - Caches results locally (`~/Library/Application Support/ports.json`) for instant loading on subsequent views.
 - **Secure Credential Storage**: Passwords are stored in the **macOS Keychain** rather than in plain text. You have the option to save your password for seamless, one-click connections, or omit it to have macOS prompt you securely each time (recommended for shared computers).
 - **Modern UI/UX**: 
-  - Beautiful glassmorphism design with animated background orbs.
+  - Beautiful glassmorphism design with animated background orbs and radar loading animations.
   - Built-in Dark and Light mode toggle (persisted across sessions).
   - Smooth micro-animations and transitions for a premium feel.
 
@@ -53,10 +58,11 @@ Tether is a modern, lightweight desktop application built with [Wails](https://w
 ```
 tether/
 ├── app.go           # Main App struct, startup lifecycle, OpenX connection handler
-├── config.go        # Config persistence (read/write JSON to ~/Library/Application Support/tether)
+├── config.go        # Config persistence (read/write JSON to ~/Library/Application Support/tether.json)
 ├── ip.go            # IP address validation, ping verification, .local hostname resolution
 ├── username.go      # Username validation
 ├── password.go      # Password storage via macOS Keychain (go-keyring)
+├── portscan.go      # Fast concurrent TCP scanner, banner grabbing, HTTP title scraping
 ├── main.go          # Wails application entry point
 ├── frontend/
 │   ├── src/
