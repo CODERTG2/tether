@@ -6,6 +6,10 @@ export function DeletePassword() {
   return window['go']['main']['App']['DeletePassword']();
 }
 
+export function DeletePort(arg1) {
+  return window['go']['main']['App']['DeletePort'](arg1);
+}
+
 export function GetConfig() {
   return window['go']['main']['App']['GetConfig']();
 }
@@ -18,6 +22,10 @@ export function GetPassword() {
   return window['go']['main']['App']['GetPassword']();
 }
 
+export function GetPorts() {
+  return window['go']['main']['App']['GetPorts']();
+}
+
 export function GetUsername() {
   return window['go']['main']['App']['GetUsername']();
 }
@@ -26,10 +34,22 @@ export function OpenX(arg1) {
   return window['go']['main']['App']['OpenX'](arg1);
 }
 
+export function Portscan(arg1) {
+  return window['go']['main']['App']['Portscan'](arg1);
+}
+
 export function SetConfig(arg1, arg2) {
   return window['go']['main']['App']['SetConfig'](arg1, arg2);
 }
 
 export function SetPassword(arg1) {
   return window['go']['main']['App']['SetPassword'](arg1);
+}
+
+export function SetPorts(arg1) {
+  return window['go']['main']['App']['SetPorts'](arg1);
+}
+
+export function UpdatePortTitle(arg1, arg2) {
+  return window['go']['main']['App']['UpdatePortTitle'](arg1, arg2);
 }

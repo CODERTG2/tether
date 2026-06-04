@@ -16,7 +16,7 @@ func (a *App) SetConfig(new_ip string, new_username string) error {
 	if err != nil {
 		return fmt.Errorf("Could not get config directory: %v", err)
 	}
-	var path string = baseDir + "/tether"
+	var path string = baseDir + "/tether.json"
 
 	ip, err1 := VerifyIP(new_ip)
 	err2 := VerifyUsername(new_username)
@@ -36,7 +36,7 @@ func (a *App) GetConfig() (Config, error) {
 	if err != nil {
 		return Config{}, fmt.Errorf("Could not get config directory: %v", err)
 	}
-	var path string = baseDir + "/tether"
+	var path string = baseDir + "/tether.json"
 	return Read(path)
 }
 

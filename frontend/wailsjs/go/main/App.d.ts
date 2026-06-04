@@ -4,16 +4,26 @@ import {main} from '../models';
 
 export function DeletePassword():Promise<void>;
 
+export function DeletePort(arg1:number):Promise<Array<main.Port>>;
+
 export function GetConfig():Promise<main.Config>;
 
 export function GetIP():Promise<string>;
 
 export function GetPassword():Promise<string>;
 
+export function GetPorts():Promise<Array<main.Port>>;
+
 export function GetUsername():Promise<string>;
 
 export function OpenX(arg1:string):Promise<void>;
 
+export function Portscan(arg1:string):Promise<Array<main.Port>>;
+
 export function SetConfig(arg1:string,arg2:string):Promise<void>;
 
 export function SetPassword(arg1:string):Promise<void>;
+
+export function SetPorts(arg1:Array<main.Port>):Promise<void>;
+
+export function UpdatePortTitle(arg1:number,arg2:string):Promise<Array<main.Port>>;

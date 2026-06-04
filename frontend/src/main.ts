@@ -1,14 +1,19 @@
 import './style.css';
 
-import { SetConfig, SetPassword, DeletePassword, GetIP, GetUsername, GetPassword, OpenX } from '../wailsjs/go/main/App';
+import {
+  SetConfig, SetPassword, DeletePassword,
+  GetIP, GetUsername, GetPassword, OpenX,
+  Portscan, GetPorts, DeletePort, UpdatePortTitle
+} from '../wailsjs/go/main/App';
 
 // ──────────────────────────────────────
 // State
 // ──────────────────────────────────────
-type View = 'setup' | 'dashboard' | 'settings';
+type View = 'setup' | 'dashboard' | 'settings' | 'portscan';
 
 let currentView: View = 'setup';
 let statusTimeout: ReturnType<typeof setTimeout> | null = null;
+let cachedIP: string = '';
 
 // ──────────────────────────────────────
 // Theme
@@ -52,6 +57,10 @@ async function navigate(view: View) {
     case 'settings':
       app.innerHTML = await renderSettings();
       attachSettingsListeners();
+      break;
+    case 'portscan':
+      app.innerHTML = renderPortscanLoading();
+      attachPortscanLoadingListeners(false);
       break;
   }
 
@@ -213,6 +222,7 @@ async function renderDashboard(): Promise<string> {
   let hasPassword = false;
   try {
     ip = await GetIP();
+    cachedIP = ip;
   } catch {
     // Fallback — config not set yet
   }
@@ -251,6 +261,11 @@ async function renderDashboard(): Promise<string> {
         </button>
       </div>
 
+      <button class="btn btn-secondary" id="btn-portscan">
+        <span class="action-icon">🔍</span>
+        <span>Scan Ports</span>
+      </button>
+
       <div id="dashboard-status"></div>
     </div>
   `;
@@ -269,6 +284,10 @@ function attachDashboardListeners() {
 
   document.getElementById('btn-files')?.addEventListener('click', async () => {
     await handleAction('file', 'File Browser');
+  });
+
+  document.getElementById('btn-portscan')?.addEventListener('click', () => {
+    navigate('portscan');
   });
 }
 
@@ -463,6 +482,295 @@ async function handleSettings() {
 }
 
 // ──────────────────────────────────────
+// Port Scan View
+// ──────────────────────────────────────
+
+interface PortData {
+  portNum: number;
+  processTitle: string;
+  faviconPath: string;
+  protocol: string;
+}
+
+function renderPortscanLoading(): string {
+  return `
+    <div class="bg-orbs"></div>
+    <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme"></button>
+
+    <div class="view view-wide">
+      <div class="portscan-header">
+        <div class="title-group">
+          <button class="btn-icon" id="btn-ps-back" title="Back">←</button>
+          <h2>Port Scanner</h2>
+        </div>
+        <div class="header-actions">
+          <button class="btn-icon" id="btn-ps-refresh" title="Refresh" disabled>🔄</button>
+        </div>
+      </div>
+
+      <div class="scan-loading-container" id="scan-loading">
+        <div class="radar-container">
+          <div class="radar-ring radar-ring-1"></div>
+          <div class="radar-ring radar-ring-2"></div>
+          <div class="radar-ring radar-ring-3"></div>
+          <div class="radar-dot">🔍</div>
+        </div>
+        <div class="scan-loading-text">
+          <h3>Scanning all 65,535 ports...</h3>
+          <p>This may take a moment</p>
+        </div>
+      </div>
+
+      <div id="portscan-results" style="display: none;"></div>
+      <div id="portscan-status"></div>
+    </div>
+  `;
+}
+
+function attachPortscanLoadingListeners(forceRescan: boolean) {
+  document.getElementById('theme-toggle')?.addEventListener('click', toggleTheme);
+
+  document.getElementById('btn-ps-back')?.addEventListener('click', () => {
+    navigate('dashboard');
+  });
+
+  if (forceRescan) {
+    // User clicked refresh — always do a fresh scan
+    startPortscan();
+  } else {
+    // Try loading cached ports first
+    loadCachedOrScan();
+  }
+}
+
+async function loadCachedOrScan() {
+  try {
+    const cached: PortData[] = await GetPorts();
+    if (cached && cached.length > 0) {
+      cached.sort((a, b) => a.portNum - b.portNum);
+      renderPortResults(cached);
+      return;
+    }
+  } catch {
+    // No cached ports — fall through to scan
+  }
+  startPortscan();
+}
+
+async function startPortscan() {
+  try {
+    const ip = cachedIP || await GetIP();
+    cachedIP = ip;
+    const ports: PortData[] = await Portscan(ip);
+
+    // Sort by port number
+    ports.sort((a, b) => a.portNum - b.portNum);
+
+    renderPortResults(ports);
+  } catch (err: unknown) {
+    const loadingEl = document.getElementById('scan-loading');
+    if (loadingEl) loadingEl.style.display = 'none';
+
+    const message = err instanceof Error ? err.message : String(err);
+    showStatus('portscan-status', `Scan failed: ${message}`, 'error');
+  }
+}
+
+function renderPortResults(ports: PortData[]) {
+  const loadingEl = document.getElementById('scan-loading');
+  if (loadingEl) loadingEl.style.display = 'none';
+
+  const resultsEl = document.getElementById('portscan-results');
+  if (!resultsEl) return;
+
+  // Enable refresh button
+  const refreshBtn = document.getElementById('btn-ps-refresh');
+  if (refreshBtn) {
+    refreshBtn.removeAttribute('disabled');
+    refreshBtn.addEventListener('click', () => {
+      const app = document.getElementById('app')!;
+      app.innerHTML = renderPortscanLoading();
+      attachPortscanLoadingListeners(true);
+      renderThemeToggle();
+    });
+  }
+
+  if (ports.length === 0) {
+    resultsEl.style.display = 'block';
+    resultsEl.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">📡</div>
+        <h3>No open ports found</h3>
+        <p>The server didn't respond on any ports. Make sure it's online and reachable.</p>
+      </div>
+    `;
+    return;
+  }
+
+  resultsEl.style.display = 'block';
+  resultsEl.innerHTML = `
+    <div class="port-summary">
+      <span class="port-count">${ports.length}</span> open port${ports.length !== 1 ? 's' : ''} found on <strong>${escapeHtml(cachedIP)}</strong>
+    </div>
+    <div class="port-list">
+      ${ports.map((port, index) => renderPortRow(port, index)).join('')}
+    </div>
+  `;
+
+  // Attach row listeners
+  attachPortRowListeners(ports);
+}
+
+function getPortIcon(port: PortData): string {
+  if (port.faviconPath && port.faviconPath.length > 0) {
+    // Build full favicon URL
+    let faviconUrl = port.faviconPath;
+    if (faviconUrl.startsWith('/')) {
+      faviconUrl = `http://${cachedIP}:${port.portNum}${faviconUrl}`;
+    } else if (!faviconUrl.startsWith('http')) {
+      faviconUrl = `http://${cachedIP}:${port.portNum}/${faviconUrl}`;
+    }
+    return `<img class="port-favicon" src="${escapeHtml(faviconUrl)}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" /><span class="port-emoji-fallback" style="display:none;">🌐</span>`;
+  }
+
+  if (port.protocol === 'http') return '<span class="port-emoji">🌐</span>';
+  if (port.protocol === 'banner') return '<span class="port-emoji">📡</span>';
+  if (port.processTitle === 'Unknown') return '<span class="port-emoji">❓</span>';
+
+  // Map protocol — known services
+  return '<span class="port-emoji">⚙️</span>';
+}
+
+function getProtocolBadgeClass(protocol: string): string {
+  switch (protocol) {
+    case 'http': return 'badge-http';
+    case 'banner': return 'badge-banner';
+    case 'map': return 'badge-map';
+    default: return 'badge-map';
+  }
+}
+
+function getProtocolLabel(protocol: string): string {
+  switch (protocol) {
+    case 'http': return 'HTTP';
+    case 'banner': return 'Banner';
+    case 'map': return 'Known';
+    default: return protocol;
+  }
+}
+
+function renderPortRow(port: PortData, index: number): string {
+  return `
+    <div class="port-row" data-port="${port.portNum}" style="animation-delay: ${index * 30}ms;">
+      <div class="port-icon-cell">
+        ${getPortIcon(port)}
+      </div>
+      <div class="port-info-cell">
+        <div class="port-title-row">
+          <span class="port-title" id="port-title-${port.portNum}">${escapeHtml(port.processTitle)}</span>
+          <button class="port-edit-btn" data-edit-port="${port.portNum}" title="Edit title">✏️</button>
+        </div>
+        <div class="port-meta">
+          <span class="port-number">:${port.portNum}</span>
+          <span class="protocol-badge ${getProtocolBadgeClass(port.protocol)}">${getProtocolLabel(port.protocol)}</span>
+        </div>
+      </div>
+      <div class="port-actions-cell">
+        <button class="port-delete-btn" data-delete-port="${port.portNum}" title="Remove port">
+          <span>✕</span>
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function attachPortRowListeners(ports: PortData[]) {
+  // Edit buttons
+  document.querySelectorAll('[data-edit-port]').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      const portNum = parseInt((e.currentTarget as HTMLElement).getAttribute('data-edit-port')!);
+      startInlineEdit(portNum, ports);
+    });
+  });
+
+  // Delete buttons
+  document.querySelectorAll('[data-delete-port]').forEach((btn) => {
+    btn.addEventListener('click', async (e) => {
+      const portNum = parseInt((e.currentTarget as HTMLElement).getAttribute('data-delete-port')!);
+      const row = document.querySelector(`.port-row[data-port="${portNum}"]`) as HTMLElement;
+
+      if (row) {
+        row.classList.add('port-row-removing');
+        await new Promise(r => setTimeout(r, 300));
+      }
+
+      try {
+        const updated: PortData[] = await DeletePort(portNum);
+        updated.sort((a, b) => a.portNum - b.portNum);
+        renderPortResults(updated);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        showStatus('portscan-status', message, 'error');
+      }
+    });
+  });
+}
+
+function startInlineEdit(portNum: number, ports: PortData[]) {
+  const titleEl = document.getElementById(`port-title-${portNum}`);
+  const editBtn = document.querySelector(`[data-edit-port="${portNum}"]`) as HTMLElement;
+  if (!titleEl) return;
+
+  const currentTitle = ports.find(p => p.portNum === portNum)?.processTitle || '';
+
+  // Replace title span with an input
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.className = 'port-edit-input';
+  input.value = currentTitle;
+  input.id = `port-edit-input-${portNum}`;
+
+  titleEl.replaceWith(input);
+  if (editBtn) editBtn.style.display = 'none';
+  input.focus();
+  input.select();
+
+  const save = async () => {
+    const newTitle = input.value.trim();
+    if (newTitle && newTitle !== currentTitle) {
+      try {
+        const updated: PortData[] = await UpdatePortTitle(portNum, newTitle);
+        updated.sort((a, b) => a.portNum - b.portNum);
+        renderPortResults(updated);
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : String(err);
+        showStatus('portscan-status', message, 'error');
+      }
+    } else {
+      // Restore original title
+      const span = document.createElement('span');
+      span.className = 'port-title';
+      span.id = `port-title-${portNum}`;
+      span.textContent = currentTitle;
+      input.replaceWith(span);
+      if (editBtn) editBtn.style.display = '';
+    }
+  };
+
+  input.addEventListener('blur', save);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      input.blur();
+    }
+    if (e.key === 'Escape') {
+      input.value = currentTitle; // Reset value so save() restores
+      input.blur();
+    }
+  });
+}
+
+// ──────────────────────────────────────
 // Helpers
 // ──────────────────────────────────────
 function showStatus(containerId: string, message: string, type: 'success' | 'error' | 'loading') {
@@ -496,6 +804,7 @@ async function init() {
   try {
     const existingIP = await GetIP();
     if (existingIP) {
+      cachedIP = existingIP;
       navigate('dashboard');
       return;
     }
