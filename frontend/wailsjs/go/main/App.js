@@ -38,6 +38,10 @@ export function Portscan(arg1) {
   return window['go']['main']['App']['Portscan'](arg1);
 }
 
+export function SSHSession() {
+  return window['go']['main']['App']['SSHSession']();
+}
+
 export function SetConfig(arg1, arg2) {
   return window['go']['main']['App']['SetConfig'](arg1, arg2);
 }

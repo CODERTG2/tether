@@ -20,6 +20,8 @@ export function OpenX(arg1:string):Promise<void>;
 
 export function Portscan(arg1:string):Promise<Array<main.Port>>;
 
+export function SSHSession():Promise<void>;
+
 export function SetConfig(arg1:string,arg2:string):Promise<void>;
 
 export function SetPassword(arg1:string):Promise<void>;

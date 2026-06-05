@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"strings"
 )
 
 // App struct
@@ -49,4 +50,40 @@ func (a *App) OpenX(action string) error {
 		return err
 	}
 	return nil
+}
+
+func (a *App) SSHSession() error {
+	ip, err1 := a.GetIP()
+	username := a.GetUsername()
+	pwd := a.GetPassword()
+	if err1 != nil {
+		return fmt.Errorf("Could not get IP")
+	}
+	if username == "" {
+		return fmt.Errorf("Could not get username")
+	}
+
+	if pwd == "" {
+		return exec.Command("open", "ssh://"+username+"@"+ip).Run()
+	} else {
+		safePwd := strings.ReplaceAll(pwd, "'", "'\\''")
+
+		script := fmt.Sprintf(`
+			tell application "Terminal"
+				activate
+				do script "expect -c '
+					set timeout 10
+					spawn ssh -o StrictHostKeyChecking=no %s@%s
+					expect {
+						-nocase \"password:\" { send \"%s\\r\" }
+						\"*(yes/no)*\"       { send \"yes\\r\"; exp_continue }
+						timeout              { exit 1 }
+					}
+					interact
+				'"
+			end tell
+		`, username, ip, safePwd)
+
+		return exec.Command("osascript", "-e", script).Run()
+	}
 }

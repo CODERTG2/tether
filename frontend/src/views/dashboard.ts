@@ -1,4 +1,4 @@
-import { GetIP, GetUsername, GetPassword, OpenX } from '../../wailsjs/go/main/App';
+import { GetIP, GetUsername, GetPassword, OpenX, SSHSession } from '../../wailsjs/go/main/App';
 import { toggleTheme, showStatus, escapeHtml, setCachedIP } from '../state';
 import { navigate } from '../router';
 
@@ -45,6 +45,10 @@ export async function renderDashboard(): Promise<string> {
           <span class="action-icon">📁</span>
           <span class="action-label">Open Files</span>
         </button>
+        <button class="btn btn-action" id="btn-ssh" ${!hasPassword ? 'title="macOS will prompt for password"' : ''}>
+          <span class="action-icon">💻</span>
+          <span class="action-label">SSH</span>
+        </button>
       </div>
 
       <button class="btn btn-secondary" id="btn-portscan">
@@ -70,6 +74,17 @@ export function attachDashboardListeners() {
 
   document.getElementById('btn-files')?.addEventListener('click', async () => {
     await handleAction('file', 'File Browser');
+  });
+
+  document.getElementById('btn-ssh')?.addEventListener('click', async () => {
+    showStatus('dashboard-status', 'Opening SSH...', 'loading');
+    try {
+      await SSHSession();
+      showStatus('dashboard-status', 'SSH opened!', 'success');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      showStatus('dashboard-status', `Failed to open SSH: ${message}`, 'error');
+    }
   });
 
   document.getElementById('btn-portscan')?.addEventListener('click', () => {
