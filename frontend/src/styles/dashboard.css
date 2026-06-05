@@ -1,0 +1,73 @@
+/* ========================================
+   Dashboard — Header, Connection Info
+   ======================================== */
+
+.dashboard-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 32px;
+}
+
+.dashboard-header .title-group {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.dashboard-header .mini-logo {
+  width: 42px;
+  height: 42px;
+  background: linear-gradient(135deg, var(--accent), #34d399);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+}
+
+.dashboard-header h2 {
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.dashboard-header .header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+/* --- Connection Info --- */
+.connection-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  background: var(--accent-subtle);
+  border: 1px solid rgba(124, 92, 252, 0.1);
+  border-radius: var(--radius-md);
+  margin-bottom: 24px;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.connection-info .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success);
+  box-shadow: 0 0 8px var(--success-glow);
+  flex-shrink: 0;
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.connection-info span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

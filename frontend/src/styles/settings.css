@@ -1,0 +1,67 @@
+/* ========================================
+   Settings — Back Button, Password Disclosure
+   ======================================== */
+
+.settings-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.settings-top h2 {
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+/* --- Password Disclosure --- */
+.password-section {
+  margin-top: 8px;
+  margin-bottom: 20px;
+}
+
+.password-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.password-toggle-row label {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.password-disclosure {
+  background: var(--accent-subtle);
+  border: 1px solid rgba(124, 92, 252, 0.15);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  animation: fadeIn 300ms ease-out;
+}
+
+.password-disclosure p {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.password-disclosure .warning-icon {
+  display: inline;
+  margin-right: 4px;
+}
+
+.password-disclosure strong {
+  color: var(--warning);
+}
+
+.delete-password-section {
+  margin-top: 16px;
+  margin-bottom: 20px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
